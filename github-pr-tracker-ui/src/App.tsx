@@ -63,7 +63,9 @@ const App: React.FC = () => {
             }
           }}
         >
-          <RepositorySelector onRepositorySelect={handleRepositorySelect} />
+            <RepositorySelector
+                onRepositorySelect={handleRepositorySelect}
+            />
           {selectedRepos && (
             <PullRequestList
               repositories={selectedRepos.repos.join(',')}

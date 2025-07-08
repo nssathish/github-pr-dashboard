@@ -6,9 +6,9 @@ const execAsync = promisify(exec);
 require('dotenv').config();
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 3001;
 
-app.use(cors({origin: 'http://localhost:3001'}));
+app.use(cors({origin: 'http://localhost:3000'}));
 app.use(express.json());
 
 // GitHub CLI login endpoint
@@ -52,7 +52,48 @@ app.get('/api/:org/repos', async (req, res) => {
     }
 });
 
-// Get PRs for specific users
+// Get PRs for a specific user
+app.post('/api/user/prs', async (req, res) => {
+    let cmd_response;
+    try {
+        const {users, state} = req.body;
+        const prs = [];
+
+        if (users.length === 0) {
+            return res.status(400).json({error: 'User parameter is required'});
+        }
+
+        for (const user of users) {
+            const {stdout} = await execAsync(`gh search prs --author ${user} --state ${state} --json id,title,state,url,createdAt,author`);
+
+            const user_avatar_url = 'https://avatars.githubusercontent.com/u/98375917?v=4';
+            cmd_response = JSON.parse(stdout);
+
+            if (cmd_response === undefined) return res.json([]);
+
+            console.log(`Found ${cmd_response.length} PRs for user: ${user}`);
+
+            prs.push(cmd_response.map(pr => ({
+                "id": pr.id,
+                "title": pr.title,
+                "state": pr.state,
+                "created_at": pr.createdAt,
+                "user": {
+                    "login": pr.author.login,
+                    "avatar_url": user_avatar_url
+                },
+                html_url: pr.url
+            })));
+        };
+
+        res.json(prs.flat());
+
+    } catch (error) {
+        res.status(500).json({error: 'Failed to fetch PRs', details: error.message});
+    }
+});
+
+// Get PRs for specific users under a specific repository
 app.post('/api/prs', async (req, res) => {
     let cmd_response;
     try {
@@ -70,21 +111,25 @@ app.post('/api/prs', async (req, res) => {
             const {stdout} = await execAsync(`gh pr list --repo ${owner}/${repository} --author "${user}" --json id,title,state,url,createdAt,headRefName,author`);
             // const user_avatar_url = await execAsync(`gh api /users/${user} --jq '.avatar_url'`);
             const user_avatar_url = 'https://avatars.githubusercontent.com/u/98375917?v=4';
-            cmd_response = JSON.parse(stdout)[0];
+            cmd_response = JSON.parse(stdout);
 
             if (cmd_response === undefined) continue;
 
-            prs.push({
-                "id": cmd_response.id,
-                "title": cmd_response.title,
-                "state": cmd_response.state,
-                "created_at": cmd_response.createdAt,
-                "user": {
-                    "login": cmd_response.author.login,
-                    "avatar_url": user_avatar_url
-                },
-                html_url: cmd_response.url
-            })
+            if (Array.isArray(cmd_response)) {
+                cmd_response.forEach(pr => {
+                    prs.push({
+                        "id": pr.id,
+                        "title": pr.title,
+                        "state": pr.state,
+                        "created_at": pr.createdAt,
+                        "user": {
+                            "login": pr.author.login,
+                            "avatar_url": user_avatar_url
+                        },
+                        html_url: pr.url
+                    })
+                })
+            }
         }
 
         res.json(prs);

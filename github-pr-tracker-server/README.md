@@ -38,15 +38,15 @@ A Node.js server that uses GitHub CLI to track pull requests for specific users.
 
 1. First authenticate using GitHub CLI:
    ```bash
-   curl -X POST http://localhost:3000/api/auth/login
+   curl -X POST http://localhost:3001/api/auth/login
    ```
 
 2. Check authentication status:
    ```bash
-   curl http://localhost:3000/api/auth/status
+   curl http://localhost:3001/api/auth/status
    ```
 
 3. Get PRs for specific users:
    ```bash
-   curl http://localhost:3000/api/prs?users=octocat,defunkt
+   curl -X POST http://localhost:3001/api/prs?users=octocat,defunkt
    ```

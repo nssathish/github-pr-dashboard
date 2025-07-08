@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Paper,
   Typography,
   Box,
   CircularProgress,
@@ -45,48 +44,93 @@ const PullRequestFinder: React.FC<PullRequestFinderProps> = ({ users, repositori
         const repoArray = repositories.split(',').map((repo) => repo.trim());
         let allFilteredPullRequests: PullRequest[] = [];
 
-        for (const repo of repoArray) {
-          const [owner, repository] = [process.env.REACT_APP_DEFAULT_OWNER, repo];
-          if (!owner || !repository) {
-            setError(`Invalid repository format: ${repo}. Use owner/repo.`);
-            continue;
+        if (repositories.length === 0) {
+          if(!users) {
+            setError('Please provide valid users');
+            return;
+
+          } else {
+
+            try {
+              const response = await axios.post(
+                  `${process.env.REACT_APP_GITHUB_PR_TRACKER_API_URL}/api/user/prs`,
+                  {
+                    users: users.split(','),
+                    state: "open"
+                  },
+                  {
+                    headers: {
+                      "Access-Control-Allow-Origin": "http://localhost:3001",
+                      "Access-Control-Allow-Methods": 'GET, POST, PUT',
+                      "Access-Control-Allow-Headers": 'Content-Type'
+                    }
+                  }
+              );
+
+              const filteredPRs = response.data
+                  .map((pr: PullRequest) => ({
+                    id: pr.id,
+                    title: pr.title,
+                    state: pr.state,
+                    created_at: pr.created_at,
+                    user: {
+                      login: pr.user!.login,
+                      avatar_url: pr.user!.avatar_url,
+                    },
+                    html_url: pr.html_url,
+                  }));
+
+              allFilteredPullRequests = [...allFilteredPullRequests, ...filteredPRs];
+            } catch (err) {
+              console.error(`Failed to fetch pull requests for ${users}:`, err);
+            }
           }
 
-          try {
-            const response = await axios.post(
-              `${process.env.REACT_APP_GITHUB_PR_TRACKER_API_URL}/api/prs`,
-              {
-                users,
-                repository,
-                owner
-              },
-              {
-                headers: {
-                  "Access-Control-Allow-Origin": "http://localhost:3001",
-                  "Access-Control-Allow-Methods": 'GET, POST, PUT',
-                  "Access-Control-Allow-Headers": 'Content-Type'
-                }
-              }
-            );
+        } else {
+          for (const repo of repoArray) {
+            const [owner, repository] = [process.env.REACT_APP_DEFAULT_OWNER, repo];
+            if (!owner || !repository) {
+              setError(`Invalid repository format: ${repo}. Use owner/repo.`);
+              continue;
+            }
 
-            const filteredPRs = response.data
-              .map((pr: PullRequest) => ({
-                id: pr.id,
-                title: pr.title,
-                state: pr.state,
-                created_at: pr.created_at,
-                user: {
-                  login: pr.user!.login,
-                  avatar_url: pr.user!.avatar_url,
+            try {
+              const response = await axios.post(
+                `${process.env.REACT_APP_GITHUB_PR_TRACKER_API_URL}/api/prs`,
+                {
+                  users,
+                  repository,
+                  owner
                 },
-                html_url: pr.html_url,
-              }));
+                {
+                  headers: {
+                    "Access-Control-Allow-Origin": "http://localhost:3001",
+                    "Access-Control-Allow-Methods": 'GET, POST, PUT',
+                    "Access-Control-Allow-Headers": 'Content-Type'
+                  }
+                }
+              );
 
-            allFilteredPullRequests = [...allFilteredPullRequests, ...filteredPRs];
-          } catch (err) {
-            console.error(`Failed to fetch pull requests for ${repo}:`, err);
+              const filteredPRs = response.data
+                .map((pr: PullRequest) => ({
+                  id: pr.id,
+                  title: pr.title,
+                  state: pr.state,
+                  created_at: pr.created_at,
+                  user: {
+                    login: pr.user!.login,
+                    avatar_url: pr.user!.avatar_url,
+                  },
+                  html_url: pr.html_url,
+                }));
+
+              allFilteredPullRequests = [...allFilteredPullRequests, ...filteredPRs];
+            } catch (err) {
+              console.error(`Failed to fetch pull requests for ${repo}:`, err);
+            }
           }
         }
+
 
         setPullRequests(allFilteredPullRequests);
       } catch (err) {
@@ -97,7 +141,7 @@ const PullRequestFinder: React.FC<PullRequestFinderProps> = ({ users, repositori
       }
     };
 
-    fetchFilteredPullRequests();
+    fetchFilteredPullRequests().then(() => {console.log('Pull requests fetched successfully')});
   }, [users, repositories]);
 
   if (loading) {
