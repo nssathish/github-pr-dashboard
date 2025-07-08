@@ -38,10 +38,11 @@ const App: React.FC = () => {
   const [selectedRepos, setSelectedRepos] = useState<{
     owners: string[];
     repos: string[];
+    userOnly: boolean;
   } | null>(null);
 
-  const handleRepositorySelect = (owners: string[], repos: string[]) => {
-    setSelectedRepos({ owners, repos });
+  const handleRepositorySelect = (owners: string[], repos: string[], userOnly: boolean) => {
+    setSelectedRepos({ owners, repos, userOnly });
   };
 
   return (
@@ -70,6 +71,7 @@ const App: React.FC = () => {
             <PullRequestList
               repositories={selectedRepos.repos.join(',')}
               users={selectedRepos.owners.join(',')}
+              userOnly={selectedRepos.userOnly}
             />
           )}
         </Container>

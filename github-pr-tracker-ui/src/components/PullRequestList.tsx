@@ -28,9 +28,10 @@ interface PullRequest {
 interface PullRequestFinderProps {
   users: string; // Comma-separated users
   repositories: string; // Comma-separated repositories in the format: owner/repo
+  userOnly?: boolean;
 }
 
-const PullRequestFinder: React.FC<PullRequestFinderProps> = ({ users, repositories }) => {
+const PullRequestFinder: React.FC<PullRequestFinderProps> = ({ users, repositories, userOnly }) => {
   const [pullRequests, setPullRequests] = useState<PullRequest[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -44,7 +45,8 @@ const PullRequestFinder: React.FC<PullRequestFinderProps> = ({ users, repositori
         const repoArray = repositories.split(',').map((repo) => repo.trim());
         let allFilteredPullRequests: PullRequest[] = [];
 
-        if (repositories.length === 0) {
+        console.log(`useronly: ${userOnly}`);
+        if (repositories.length === 0 || userOnly) {
           if(!users) {
             setError('Please provide valid users');
             return;
@@ -142,7 +144,7 @@ const PullRequestFinder: React.FC<PullRequestFinderProps> = ({ users, repositori
     };
 
     fetchFilteredPullRequests().then(() => {console.log('Pull requests fetched successfully')});
-  }, [users, repositories]);
+  }, [users, repositories, userOnly]);
 
   if (loading) {
     return (
